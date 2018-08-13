@@ -62,4 +62,14 @@ ENV PATH="${FALCON_PREFIX}/bin:/minimap2:${PATH}"
 COPY --from=qsub /usr/bin/qsub /usr/bin/
 
 
+# Falcon (interactive) tests: fc_run fc_run_ecoli_2.cfg
+WORKDIR /ecoli_test
+ADD https://raw.githubusercontent.com/PacificBiosciences/FALCON/master/examples/fc_run_ecoli_2.cfg .
+WORKDIR /ecoli_test/data
+ADD https://www.dropbox.com/s/tb78i5i3nrvm6rg/m140913_050931_42139_c100713652400000001823152404301535_s1_p0.1.subreads.fasta .
+ADD https://www.dropbox.com/s/v6wwpn40gedj470/m140913_050931_42139_c100713652400000001823152404301535_s1_p0.2.subreads.fasta .
+ADD https://www.dropbox.com/s/j61j2cvdxn4dx4g/m140913_050931_42139_c100713652400000001823152404301535_s1_p0.3.subreads.fasta .
+WORKDIR /ecoli_test
+
+
 CMD ["/bin/bash"]
