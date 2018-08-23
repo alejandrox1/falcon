@@ -6,12 +6,16 @@
 package main
 
 import (
-	"fmt"
+	"io"
+	"log"
 	"os"
+	"os/exec"
 	"strings"
 )
 
 var (
+	logger *log.Logger
+
 	jobName      string
 	parallelEnv  []string
 	queueName    string
@@ -23,14 +27,14 @@ var (
 )
 
 func parseCmdArgs() {
-	fmt.Println(os.Args[:])
+	logger.Println(os.Args[:])
 	for i := 1; i < len(os.Args); i++ {
 		arg := os.Args[i]
 
 		switch arg {
 		case "-N":
 			if i+1 >= len(os.Args) {
-				fmt.Println("Error: correct format -- ./cmd -N <string>")
+				logger.Println("Error: correct format -- ./cmd -N <string>")
 				return
 			}
 			jobName = os.Args[i+1]
@@ -38,7 +42,7 @@ func parseCmdArgs() {
 
 		case "-pe":
 			if i+2 >= len(os.Args) {
-				fmt.Println("Error: correct format -- ./cmd -pe <str> <str>")
+				logger.Println("Error: correct format -- ./cmd -pe <str> <str>")
 				return
 			}
 			for _, e := range os.Args[i+1:] {
@@ -51,7 +55,7 @@ func parseCmdArgs() {
 
 		case "-q":
 			if i+1 >= len(os.Args) {
-				fmt.Println("Error: correct format -- ./cmd -q <string>")
+				logger.Println("Error: correct format -- ./cmd -q <string>")
 				return
 			}
 			queueName = os.Args[i+1]
@@ -65,7 +69,7 @@ func parseCmdArgs() {
 
 		case "-o":
 			if i+1 >= len(os.Args) {
-				fmt.Println("Error: correct format -- ./cmd -o <string>")
+				logger.Println("Error: correct format -- ./cmd -o <string>")
 				return
 			}
 			stdoutStream = os.Args[i+1]
@@ -73,7 +77,7 @@ func parseCmdArgs() {
 
 		case "-e":
 			if i+1 >= len(os.Args) {
-				fmt.Println("Error: correct format -- ./cmd -e <string>")
+				logger.Println("Error: correct format -- ./cmd -e <string>")
 				return
 			}
 			stderrStream = os.Args[i+1]
@@ -81,7 +85,7 @@ func parseCmdArgs() {
 
 		case "-S":
 			if i+1 >= len(os.Args) {
-				fmt.Println("Error: correct format -- ./cmd -S <string>...")
+				logger.Println("Error: correct format -- ./cmd -S <string>...")
 				return
 			}
 			for _, c := range os.Args[i+1:] {
@@ -93,21 +97,46 @@ func parseCmdArgs() {
 			}
 
 		default:
-			fmt.Println("def: ", arg)
-			return
+			logger.Println("Unknown command line option: ", arg)
+			os.Exit(1)
 		}
 	}
+}
+
+func createLogger(filename string) *log.Logger {
+	prefix := "go-qsub: "
+	flags := log.Lshortfile | log.Ldate
+
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := io.MultiWriter(os.Stdout, file)
+	return log.New(w, prefix, flags)
+}
+
+func init() {
+	logger = createLogger("qsub.log")
 }
 
 func main() {
 	parseCmdArgs()
 
-	fmt.Println("job name: ", jobName)
-	fmt.Println("parallel env: ", parallelEnv)
-	fmt.Println("queue: ", queueName)
-	fmt.Println("export: ", exportEnv)
-	fmt.Println("current directory: ", currentDir)
-	fmt.Println("stdout: ", stdoutStream)
-	fmt.Println("stderr: ", stderrStream)
-	fmt.Println("shell: ", jobShell)
+	logger.Println("job name: ", jobName)
+	logger.Println("parallel env: ", parallelEnv)
+	logger.Println("queue: ", queueName)
+	logger.Println("export: ", exportEnv)
+	logger.Println("current directory: ", currentDir)
+	logger.Println("stdout: ", stdoutStream)
+	logger.Println("stderr: ", stderrStream)
+	logger.Println("shell: ", jobShell)
+
+	out, err := exec.Command(jobShell[0], jobShell[1:]...).Output()
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	logger.Printf("Output: %s\n", out)
+	logger.Println("COMPLETED!")
 }
